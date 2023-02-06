@@ -1,0 +1,6 @@
+node_modules
+dist
+cities-simple-countMap.json
+cities-simple-pop.json
+grid_totals.csv
+cityTiles
