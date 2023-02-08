@@ -389,52 +389,21 @@ let minDensity = 200;
 
 findContour(center,minDensity)
 
-
-function findContour(center,minDensity){
-    
-    var minPoint = [0,0,Infinity];
-    for (var i=Math.round(center[1]*24-1.0/2)-4;i<Math.round(center[1]*24-1.0/2)+5;i++){
-        var ii = (i+1.0/2)/24
-        if (ii < -90 || ii > 90){continue}
-        var iArea = computeArea(ii);
-        for (var j=Math.round(center[0]*24-1.0/2)-4;j<Math.round(center[0]*24-1.0/2)+5;j++){
-            var jj = (j+1.0/2)/24	
-            if (jj < -180 || jj > 180){continue}
-            
-            if (countMap[i+";"+j] && countMap[i+";"+j]/iArea > minDensity){
-                var d = Math.pow(center[1]-ii,2)+Math.pow(center[0]-jj,2);
-                if (d < minPoint[2]){
-                    if ((countMap[i+";"+(j+1)] && countMap[i+";"+(j+1)]/iArea > minDensity) || (countMap[i+";"+(j-1)] && countMap[i+";"+(j-1)]/iArea > minDensity)){
-                        minPoint = [i,j,d];
-                    }
-                    else if ((countMap[(i+1)+";"+j] && countMap[(i+1)+";"+j]/iArea > minDensity) || (countMap[(i-1)+";"+j] && countMap[(i-1)+";"+j]/iArea > minDensity)){
-                        minPoint = [i,j,d];
-                    }
-                    
-                }
-            }
-        }
-    }
-    if (minPoint[2] == Infinity){
-        return;
-    }
-    var i = minPoint[0];
-	var j = minPoint[1];
+function contourFromPoint(i,j,minDensity){
+	console.log('start contour',Date.now())
     var iArea = computeArea((i+1.0/2)/24);
     while (true){
         if (countMap[i+";"+j] && countMap[i+";"+j]/iArea > minDensity){
             j--;
-			console.log(i,j,countMap[i+";"+j]/iArea);
         }
         else {
-			console.log(i,j);
             break;
         }
     }
 
     let boundary = {};
     var p = [j+1,i];
-    var s = [j+1,i,3];
+    var s = [j+1,i,{3:1}];
     boundary[i+";"+(j+1)]=true;
 	var boundaryList = [];
 	boundaryList.push([(j+1)/24,(i+1.0/2)/24]);
@@ -443,11 +412,9 @@ function findContour(center,minDensity){
 	cList.push(c);
     var d = 3;//right
 	var count = 0;
-    while (c[0] != s[0] || c[1] != s[1] || d != s[2]){
+    while (c[0] != s[0] || c[1] != s[1] || !s[2][d]){
         if (c[0] == s[0] && c[1] == s[1]){
-            s[2] = d;
-			boundaryList = [];
-			
+            s[2][d]=boundaryList.length;
         }
         var density = 0;
         if (countMap[c[1]+";"+c[0]]){
@@ -456,37 +423,46 @@ function findContour(center,minDensity){
         }
         
         if (density > minDensity){
+			
             boundary[c[1]+";"+c[0]]=true;
 			
 			[(j+1)/24,(i+1.0/2)/24]
             p = [c[0],c[1]];
-            if (d == 0){c[0]--; d = 1; boundaryList.push([c[0]/24,(c[1]+1.0/2)/24]);}
-            else if (d == 1){c[0]++; d = 0; boundaryList.push([(c[0]+1.0)/24,(c[1]+1.0/2)/24]);}
-            else if (d == 2){c[1]++; d = 3; boundaryList.push([(c[0]+1.0/2)/24,(c[1]+1.0)/24]);}
-            else if (d == 3){c[1]--; d = 2; boundaryList.push([(c[0]+1.0/2)/24,(c[1])/24]);}
+            if (d == 0){boundaryList.push([c[0]/24,(c[1]+1.0/2)/24]); c[0]--; d = 1; }
+            else if (d == 1){boundaryList.push([(c[0]+1.0)/24,(c[1]+1.0/2)/24]); c[0]++; d = 0; }
+            else if (d == 2){boundaryList.push([(c[0]+1.0/2)/24,(c[1]+1.0)/24]); c[1]++; d = 3; }
+            else if (d == 3){boundaryList.push([(c[0]+1.0/2)/24,(c[1])/24]); c[1]--; d = 2; }
         }
         else {
             if (c[0] == p[0]){
                 if (c[1] > p[1]){
+					boundaryList.push([(c[0]+1.0/2)/24,(c[1])/24]);
                     c[0]++; d= 0;
                 }
                 else {
+					boundaryList.push([(c[0]+1.0/2)/24,(c[1]+1)/24]);
                     c[0]--; d= 1;
                 }
             }
             else if (c[0] > p[0]){
                 if (c[1] < p[1]){
+					boundaryList.push([(c[0])/24,(c[1]+1)/24]);
                     c[0]--; d= 1;
                 }
                 else {
+					if (c[1] > p[1]){boundaryList.push([(c[0])/24,(c[1])/24]);}
+					else {boundaryList.push([(c[0])/24,(c[1]+1.0/2)/24]);}
                     c[1]--; d= 2;
                 }
             }
             else {
                 if (c[1] > p[1]){
+					boundaryList.push([(c[0]+1)/24,(c[1])/24]);
                     c[0]++; d= 0;
                 }
                 else {
+					if (c[1] < p[1]){boundaryList.push([(c[0]+1)/24,(c[1]+1)/24]);}
+					else {boundaryList.push([(c[0]+1)/24,(c[1]+1.0/2)/24]);}
                     c[1]++; d= 3;
                 }
             }
@@ -496,6 +472,33 @@ function findContour(center,minDensity){
 			break;
 		}
     }
+	
+	boundaryList = boundaryList.slice(s[2][d]-1);
+	console.log('end contour',Date.now(), boundaryList.length);
 	//console.log(boundaryList);
 	return boundaryList;
+}
+function findContour(center,minDensity){
+    
+    var minPoint = [0,0,Infinity];
+	var maxContour = [0,[]];
+    for (var i=Math.round(center[1]*24-1.0/2)-4;i<Math.round(center[1]*24-1.0/2)+5;i++){
+        var ii = (i+1.0/2)/24
+        if (ii < -90 || ii > 90){continue}
+        var iArea = computeArea(ii);
+        for (var j=Math.round(center[0]*24-1.0/2)-4;j<Math.round(center[0]*24-1.0/2)+5;j++){
+            var jj = (j+1.0/2)/24	
+            if (jj < -180 || jj > 180){continue}
+            
+            if (countMap[i+";"+j] && countMap[i+";"+j]/iArea > minDensity){
+				var bList = contourFromPoint(i,j,minDensity);
+				if (bList.length > maxContour[0]){
+					maxContour[0] = bList.length;
+					maxContour[1] = bList;
+				}
+            }
+        }
+    }
+	return maxContour[1]
+    
 }
