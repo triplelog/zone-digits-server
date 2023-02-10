@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "@flatten-js/core": "^1.3.5",
+    "axios": "^1.3.2",
     "express": "^4.18.2",
     "haversine": "^1.1.1",
     "socket.io": "^4.5.4"
